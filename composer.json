@@ -1,0 +1,30 @@
+{
+    "name": "chandra-hemant/htkc-utils",
+    "description": "Introducing a powerful and flexible dynamic search function for Laravel applications, designed to simplify complex queries with nested and recursive relationship conditions. This package provides an elegant solution to dynamically search across multiple models and their related data, offering developers the ability to handle various levels of relationships in a single, streamlined query.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+      "custom-search",
+      "dynamic-search",
+      "htkc-utils",
+      "laravel",
+      "laravel-utils",
+      "php",
+      "search",
+      "utils"
+    ],
+    "autoload": {
+        "psr-4": {
+            "ChandraHemant\\HtkcUtils\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Hemant Kumar Chandra",
+            "email": "hemantchandra242@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.4 || ^8.0 || ^8.1 || ^8.2 || ^8.3"
+    }
+}
