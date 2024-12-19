@@ -6,6 +6,7 @@ Introducing a powerful and flexible dynamic search function for Laravel applicat
 ## Class Overview
 
 ##### Namespace: ChandraHemant\DynamicSearch
+##### Namespace: ChandraHemant\CommonUtils
 ##### Author: Hemant Kumar Chandra
 
 ## Features
@@ -16,7 +17,7 @@ Introducing a powerful and flexible dynamic search function for Laravel applicat
 * Secure and Validated: Built-in validation ensures that only valid models and resources are processed, reducing the risk of errors and improving application security.
 
 ## Usage Example
-Here’s an example API request to demonstrate how the function works:
+Here's an example API request to demonstrate how the function works:
 
 ```json
 {
@@ -43,6 +44,153 @@ composer require chandra-hemant/htkc-utils
 
 The `DynamicSearchHelper` class provides a set of methods for retrieving and manipulating data from a database table, especially tailored for use with Laravel's Eloquent ORM. This guide outlines how to effectively utilize these methods to implement dynamic search functionality.
 
+## Core Methods
+
+### getCustomModelData
+Retrieves data from an Eloquent model with dynamic conditions and relationships.
+
+```php
+public static function getCustomModelData(
+    Model $eloquentModel,
+    array $dynamicConditions = [],
+    bool|string $isFirst = false,
+    int $limit = 0
+)
+```
+
+Parameters:
+- `$eloquentModel`: Laravel Eloquent model instance
+- `$dynamicConditions`: Array of query conditions
+- `$isFirst`: Boolean/string to get first/last record
+- `$limit`: Number of records to retrieve
+
+Example usage:
+```php
+$conditions = [
+    [
+        'method' => 'whereHas',
+        'relation' => 'orders',
+        'args' => ['status', '=', 'completed']
+    ]
+];
+$result = DynamicSearchHelper::getCustomModelData($customerModel, $conditions);
+```
+
+### uploadFiles
+Handles file uploads with various configuration options.
+
+```php
+public static function uploadFiles(
+    Request $request,
+    string $file,
+    string $path,
+    array $options = []
+)
+```
+
+Parameters:
+- `$request`: Laravel request instance
+- `$file`: File input name
+- `$path`: Upload path
+- `$options`: Configuration array including:
+  - `prefix`: File name prefix
+  - `ref_file`: Reference to old file
+  - `disk`: Storage disk
+  - `default_extension`: Default file extension
+  - `isArray`: Return array of paths
+  - `isApi`: API mode flag
+
+Example usage:
+```php
+$options = [
+    'prefix' => 'user_avatar',
+    'disk' => 'public',
+    'isArray' => false
+];
+$filePath = DynamicSearchHelper::uploadFiles($request, 'avatar', 'uploads/avatars', $options);
+```
+
+### alphaNumericGenerator
+Generates alphanumeric sequences with customizable format.
+
+```php
+public static function alphaNumericGenerator(
+    int $num,
+    string $const = '',
+    string $prefix_id = '',
+    string $ref_id = '',
+    string $prefix_char = ''
+): string
+```
+
+Parameters:
+- `$num`: Number of digits
+- `$const`: Constant prefix
+- `$prefix_id`: Additional prefix
+- `$ref_id`: Reference ID
+- `$prefix_char`: Prefix character
+
+Example usage:
+```php
+$newId = DynamicSearchHelper::alphaNumericGenerator(
+    4,
+    'INV-',
+    'Y22-',
+    'INV-AA0001'
+);
+```
+
+### dataSubmitRecursion
+Recursively attempts to save model data with safety checks.
+
+```php
+public static function dataSubmitRecursion(Model $model): bool
+```
+
+Example usage:
+```php
+$saved = DynamicSearchHelper::dataSubmitRecursion($userModel);
+```
+
+### dataDeleteRecursion
+Recursively attempts to delete model data with safety checks.
+
+```php
+public static function dataDeleteRecursion(Model $model): bool
+```
+
+Example usage:
+```php
+$deleted = DynamicSearchHelper::dataDeleteRecursion($userModel);
+```
+
+### sendMail
+Sends emails with advanced configuration options.
+
+```php
+public static function sendMail($recipient, $mailable, array $options = []): bool
+```
+
+Parameters:
+- `$recipient`: Email recipient
+- `$mailable`: Laravel Mailable class
+- `$options`: Configuration array including:
+  - `cc`: CC recipients
+  - `bcc`: BCC recipients
+  - `replyTo`: Reply-to address
+  - `attachments`: Array of attachments
+
+Example usage:
+```php
+$options = [
+    'cc' => ['admin@example.com'],
+    'attachments' => [
+        ['path' => 'invoices/latest.pdf', 'name' => 'Invoice.pdf']
+    ]
+];
+$sent = DynamicSearchHelper::sendMail('user@example.com', new WelcomeMail(), $options);
+```
+
 ## Usage
 
 ### Retrieving Data
@@ -50,12 +198,11 @@ The `DynamicSearchHelper` class provides a set of methods for retrieving and man
 You can retrieve data from your database table using the `getDynamicSearchData` method.
 
 ```php
+use Illuminate\Http\Request;
 
-use Illuminate\Http\Request; // Import your Eloquent model
-
- $searchColumns = [
+$searchColumns = [
     // Specify your searchable columns here
- ];
+];
 
 $helper = new DynamicSearchHelper(
     request: $request,
@@ -81,20 +228,18 @@ $searchColumns = ['column1','relationshipMethod.column2','relationshipMethod1.re
 
 Pagination is applied automatically based on the request parameters.
 
-
 ## Constructor Parameters
 
-* `$request` (Illuminate\Http\Request).
-* `$searchColumns` (array): An array specifying columns to search in.
-* `$withPagination` (bool): Specifying paginate data or not.
-* `$queryMode` (bool): Specifying data from the provided Eloquent model.
-* `$isApi` (bool): Specifying data format.
+* `$request` (Illuminate\Http\Request)
+* `$searchColumns` (array): An array specifying columns to search in
+* `$withPagination` (bool): Specifying paginate data or not
+* `$queryMode` (bool): Specifying data from the provided Eloquent model
+* `$isApi` (bool): Specifying data format
 
 ## Methods
 
 `getDynamicSearchData(): Illuminate\Support\Collection`
 Retrieve dynamic search data from the provided Eloquent model.
-
 
 ### Example
 
@@ -108,12 +253,11 @@ class YourController extends Controller
 {
     public function index(Request $request)
     {
-
         $user = Auth::user();
 
         $helper = new DynamicSearchHelper(
             request: $request,
-            searchColumns: ['unique_id' => $user->unique_id],  // Provide your search columns if needed
+            searchColumns: ['unique_id' => $user->unique_id],
             withPagination: true,
             queryMode: false,
             isApi: false,
@@ -129,8 +273,7 @@ class YourController extends Controller
 
 ## Conclusion
 
-This guide provides a basic overview of how to use the `DynamicSearchHelper` class in your Laravel application. By following these instructions, you can easily implement dynamic search functionality.
-
+This guide provides a comprehensive overview of how to use the `DynamicSearchHelper` class in your Laravel application. By following these instructions, you can easily implement dynamic search functionality and utilize various helper methods for common tasks.
 
 ## How to Use
 
@@ -138,8 +281,6 @@ This guide provides a basic overview of how to use the `DynamicSearchHelper` cla
 2. *Initialization*: Create an instance of the DataTableHelper class.
 3. *Data Retrieval*: Call the `getDynamicSearchData` method with specified columns, relationship columns, and other parameters to retrieve custom paginated and filtered data.
 5. *Customization*: Adjust the class according to your specific use case by modifying the methods or extending its functionality.
-
-By leveraging the `DataTableHelper` class, you can seamlessly integrate dynamic search functionality into your Laravel application, providing a user-friendly and efficient way to handle large datasets in tabular form.
 
 #### Note: 
 Maintaining consistency between the searchColumns array and the actual columns in your model and its relationships is crucial for accurate search results in the DynamicSearchHelper class.

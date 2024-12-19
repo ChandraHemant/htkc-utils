@@ -107,16 +107,39 @@ class DynamicSearchHelper
      */
     private function applyDynamicConditions($model)
     {
-        $columns = request()->input('column');
-        $value = request()->input('value');
+        $searchValue = request()->input('value');
+        
+        // If no search columns are provided, use the ones from class initialization
+        $searchColumns = request()->input('column', $this->searchColumns);
+        
+        if (empty($searchColumns) || empty($searchValue)) {
+            return;
+        }
 
-        // Handle search within columns, relationships, and nested relationships
-        $model->where(function ($query) use ($columns, $value) {
-            foreach ($columns as $column) {
-                $this->applyNestedConditions($query, $column, $value);
+        // Validate all relationship paths before applying conditions
+        foreach ((array)$searchColumns as $columnPath) {
+            if (strpos($columnPath, '.') !== false) {
+                $parts = explode('.', $columnPath);
+                array_pop($parts); // Remove the column name
+                $relationshipPath = implode('.', $parts);
+                
+                try {
+                    $this->validateRelationships($model, $relationshipPath);
+                } catch (\Exception $e) {
+                    // Log the error and skip this column
+                    \Log::warning("Invalid relationship path: {$columnPath}. Error: " . $e->getMessage());
+                    continue;
+                }
+            }
+        }
+
+        $model->where(function ($query) use ($searchColumns, $searchValue) {
+            foreach ((array)$searchColumns as $columnPath) {
+                $this->applyNestedConditions($query, $columnPath, $searchValue);
             }
         });
     }
+
 
     /**
      * Recursively apply conditions for nested relationships to the query.
@@ -131,28 +154,79 @@ class DynamicSearchHelper
      *   The value to search for.
      */
 
-     private function applyNestedConditions($query, $column, $value)
+  
+     private function applyNestedConditions($query, $columnPath, $searchValue)
      {
-         // Check if the column represents a relationship (e.g., "relationship.column")
-         if (strpos($column, '.') !== false) {
-             // Split the relationship chain into an array
-             $relationshipChain = explode('.', $column);
-     
-             // Get the last item as the actual column
-             $column = array_pop($relationshipChain);
-     
-             // Iterate through the relationships to build the nested query
-             $relationship = implode('.', $relationshipChain);
-     
-             $query->orWhereHas($relationship, function ($q) use ($column, $value) {
-                 $q->where($column, 'like', "%$value%");
-             });
-         } else {
-             // Apply the condition directly to the model's columns
-             $query->orWhere($column, 'like', "%$value%");
+         // Handle direct column search
+         if (strpos($columnPath, '.') === false) {
+             $query->orWhere($columnPath, 'like', "%{$searchValue}%");
+             return;
          }
-     }
+     
+         // Split the path into relationships and target column
+         $parts = explode('.', $columnPath);
+         $targetColumn = array_pop($parts);
+         
+         // Build relationship chain for nested queries
+         $currentRelation = array_shift($parts);
+         $relationPath = $currentRelation;
+         
+         $query->orWhereHas($currentRelation, function ($subQuery) use ($parts, $targetColumn, $searchValue, $relationPath) {
+             if (empty($parts)) {
+                 // If no more relations, search in the target column
+                 $subQuery->where($targetColumn, 'like', "%{$searchValue}%");
+                 return;
+             }
+     
+             // Handle remaining nested relationships
+             $this->buildNestedRelationQuery($subQuery, $parts, $targetColumn, $searchValue, $relationPath);
+         });
+    }
+     
 
+    private function buildNestedRelationQuery($query, $relations, $targetColumn, $searchValue, $relationPath)
+    {
+        $currentRelation = array_shift($relations);
+        $newPath = $relationPath . '.' . $currentRelation;
+
+        if (empty($relations)) {
+            // Last level of nesting
+            $query->whereHas($currentRelation, function ($q) use ($targetColumn, $searchValue) {
+                $q->where($targetColumn, 'like', "%{$searchValue}%");
+            });
+            return;
+        }
+
+        // Continue building nested relationship chain
+        $query->whereHas($currentRelation, function ($subQuery) use ($relations, $targetColumn, $searchValue, $newPath) {
+            $this->buildNestedRelationQuery($subQuery, $relations, $targetColumn, $searchValue, $newPath);
+        });
+    }
+    
+    // Helper method to validate relationship existence
+    private function validateRelationships($model, $relationshipPath)
+    {
+        $relationships = explode('.', $relationshipPath);
+        $currentModel = $model;
+
+        foreach ($relationships as $relationship) {
+            if (!method_exists($currentModel, $relationship)) {
+                throw new \Exception("Relationship '{$relationship}' not found in model " . get_class($currentModel));
+            }
+            
+            $relationType = new \ReflectionMethod($currentModel, $relationship);
+            $returnType = $relationType->getReturnType();
+            
+            if (!$returnType || !is_a($returnType->getName(), 'Illuminate\Database\Eloquent\Relations\Relation', true)) {
+                throw new \Exception("Method '{$relationship}' is not a valid relationship");
+            }
+            
+            // Get the related model for next iteration
+            $currentModel = $currentModel->{$relationship}()->getRelated();
+        }
+        
+        return true;
+    }
 
     /**
      * Apply ordering to the query based on the request parameters.
