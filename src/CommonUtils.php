@@ -3,6 +3,7 @@
 namespace ChandraHemant\HtkcUtils;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Mail;
 
 class CommonUtils
 {
