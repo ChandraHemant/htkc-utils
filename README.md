@@ -40,9 +40,9 @@ You can easily add this functionality to your Laravel project by installing the 
 composer require chandra-hemant/htkc-utils
 ```
 
-# DynamicSearchHelper Class
+# DynamicSearchHelper & CommonUtils Class
 
-The `DynamicSearchHelper` class provides a set of methods for retrieving and manipulating data from a database table, especially tailored for use with Laravel's Eloquent ORM. This guide outlines how to effectively utilize these methods to implement dynamic search functionality.
+The `DynamicSearchHelper` & `CommonUtils` class provides a set of methods for retrieving and manipulating data from a database table, especially tailored for use with Laravel's Eloquent ORM. This guide outlines how to effectively utilize these methods to implement dynamic search functionality.
 
 ## Core Methods
 
@@ -73,7 +73,7 @@ $conditions = [
         'args' => ['status', '=', 'completed']
     ]
 ];
-$result = DynamicSearchHelper::getCustomModelData($customerModel, $conditions);
+$result = CommonUtils::getCustomModelData($customerModel, $conditions);
 ```
 
 ### uploadFiles
@@ -107,7 +107,21 @@ $options = [
     'disk' => 'public',
     'isArray' => false
 ];
-$filePath = DynamicSearchHelper::uploadFiles($request, 'avatar', 'uploads/avatars', $options);
+$filePath = CommonUtils::uploadFiles($request, 'avatar', 'uploads/avatars', $options);
+```
+
+*** Note:  Define the Disk in `config/filesystems.php`. It points to the `public/uploads` directory and is configured as a public disk. Make sure Disk name should be same as pointing directory name:
+```php
+...
+
+'uploads' => [
+    'driver' => 'local',
+    'root' => public_path('uploads'), // Files stored in public/uploads
+    'url' => env('APP_URL') . '/uploads', // URL to access files
+    'visibility' => 'public',
+],
+
+...
 ```
 
 ### alphaNumericGenerator
@@ -132,7 +146,7 @@ Parameters:
 
 Example usage:
 ```php
-$newId = DynamicSearchHelper::alphaNumericGenerator(
+$newId = CommonUtils::alphaNumericGenerator(
     4,
     'INV-',
     'Y22-',
@@ -149,7 +163,7 @@ public static function dataSubmitRecursion(Model $model): bool
 
 Example usage:
 ```php
-$saved = DynamicSearchHelper::dataSubmitRecursion($userModel);
+$saved = CommonUtils::dataSubmitRecursion($userModel);
 ```
 
 ### dataDeleteRecursion
@@ -161,7 +175,7 @@ public static function dataDeleteRecursion(Model $model): bool
 
 Example usage:
 ```php
-$deleted = DynamicSearchHelper::dataDeleteRecursion($userModel);
+$deleted = CommonUtils::dataDeleteRecursion($userModel);
 ```
 
 ### sendMail
@@ -188,7 +202,58 @@ $options = [
         ['path' => 'invoices/latest.pdf', 'name' => 'Invoice.pdf']
     ]
 ];
-$sent = DynamicSearchHelper::sendMail('user@example.com', new WelcomeMail(), $options);
+$sent = CommonUtils::sendMail('user@example.com', new WelcomeMail(), $options);
+```
+
+### sendPushNotification
+Handles send notification using firebase.
+
+```php
+public static function sendPushNotification(
+    string $title,
+    string $body,
+    $fcm_token,
+    array $config,
+    array $additionalData = []
+)
+```
+
+Parameters:
+- `$title`: Notification title
+- `$body`: Notification body
+- `$fcm_token`: Single FCM token or an array of FCM tokens
+- `$config`: Configuration options provided by the user:
+  - `serverKey`: The FCM server key
+  - `url`: The FCM endpoint URL (default: "https://fcm.googleapis.com/fcm/send")
+  - `priority`: The priority of the notification (default: "high")
+  - `android_channel_id`: The Android channel ID (default: "high_importance_channel")
+- `$additionalData` Optional additional data to include in the payload
+
+Example usage:
+```php
+    $title = "Hello";
+    $body = "This is a test notification.";
+    $fcm_token = "YOUR_FCM_DEVICE_TOKEN";
+
+    $config = [
+        'serverKey' => 'YOUR_SERVER_KEY_HERE',
+        'url' => 'https://fcm.googleapis.com/fcm/send',
+        'priority' => 'high',
+        'android_channel_id' => 'high_importance_channel',
+    ];
+
+    $additionalData = [
+        'custom_key' => 'custom_value',
+    ];
+
+    $response = CommonUtils::sendPushNotification($title, $body, $fcm_token, $config, $additionalData);
+
+    if ($response['status']) {
+        echo $response['message'];
+    } else {
+        echo "Error: " . $response['message'];
+        print_r($response['response']);
+    }
 ```
 
 ## Usage
