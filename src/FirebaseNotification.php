@@ -1,6 +1,6 @@
 <?php
 
-namespace ChandraHemant\FirebaseNotification;
+namespace ChandraHemant\HtkcUtils;
 
 use Google\Auth\CredentialsLoader;
 use GuzzleHttp\Client;
@@ -32,6 +32,7 @@ class FirebaseNotification
         array $config = [],
         array $additionalData = []
     ): array {
+        try{
         // Prepare the credentials
         $credentials = CredentialsLoader::makeCredentials(
             ['https://www.googleapis.com/auth/firebase.messaging'],
@@ -48,55 +49,120 @@ class FirebaseNotification
             ];
         }
 
-        // Prepare the notification payload
+        // Basic notification payload
         $notification = [
             'title' => $title,
             'body' => $body,
         ];
 
-        // Ensure all data values are strings
+        // Process image if provided
+        if (!empty($config['image_url'])) {
+            $notification['image'] = $config['image_url'];
+        }
+
+        // Base data payload
         $data = array_merge(
             [
                 'title' => (string)$title,
                 'description' => (string)$body,
                 'text' => (string)$body,
-                'is_read' => '0', // Convert to string
+                'is_read' => '0',
             ],
-            array_map('strval', $additionalData) // Ensure additional data is stringified
+            array_map('strval', $additionalData)
         );
 
-        // Adjust the payload for platform-specific configurations
-        $platformConfig = [
-            'android' => [
-                'notification' => [
-                    'sound' => 'default',
-                    'channel_id' => $config['android_channel_id'] ?? 'high_importance_channel',
+        // Android specific configuration
+        $androidConfig = [
+            'notification' => [
+                'channel_id' => $config['android_channel_id'] ?? 'high_importance_channel',
+                'notification_priority' => $config['priority'] ?? 'PRIORITY_HIGH',
+                'default_sound' => $config['with_sound'] ?? true,
+                'default_vibrate_timings' => true,
+                'default_light_settings' => true,
+            ],
+            'priority' => 'high',
+        ];
+
+        // Add Android notification sound if specified
+        if (!empty($config['custom_sound'])) {
+            $androidConfig['notification']['sound'] = $config['custom_sound'];
+        }
+
+        // Add Android icon if specified
+        if (!empty($config['android_icon'])) {
+            $androidConfig['notification']['icon'] = $config['android_icon'];
+        }
+
+        // Add Android color if specified
+        if (!empty($config['color'])) {
+            $androidConfig['notification']['color'] = $config['color'];
+        }
+
+        // Add Android light settings if specified
+        if (!empty($config['led_color']) || !empty($config['led_on_ms']) || !empty($config['led_off_ms'])) {
+            $androidConfig['notification']['light_settings'] = [
+                'color' => [
+                    'red' => hexdec(substr($config['led_color'] ?? '#FFFFFF', 1, 2)) / 255,
+                    'green' => hexdec(substr($config['led_color'] ?? '#FFFFFF', 3, 2)) / 255,
+                    'blue' => hexdec(substr($config['led_color'] ?? '#FFFFFF', 5, 2)) / 255,
+                    'alpha' => 1.0,
+                ],
+                'light_on_duration' => $config['led_on_ms'] ?? '200ms',
+                'light_off_duration' => $config['led_off_ms'] ?? '200ms',
+            ];
+        }
+
+        // Add Android actions if specified
+        if (!empty($config['actions'])) {
+            $androidConfig['notification']['click_action'] = 'FLUTTER_NOTIFICATION_CLICK';
+            $actions = [];
+            foreach ($config['actions'] as $action) {
+                $actions[] = [
+                    'action' => $action['id'],
+                    'title' => $action['title'],
+                    'icon' => $action['icon_path'] ?? null,
+                ];
+            }
+            $androidConfig['notification']['actions'] = $actions;
+        }
+
+        // iOS (APNS) specific configuration
+        $apnsConfig = [
+            'payload' => [
+                'aps' => [
+                    'sound' => $config['with_sound'] ?? true ? 'default' : null,
+                    'badge' => 1,
+                    'content-available' => 1,
                 ],
             ],
-            'apns' => [
-                'payload' => [
-                    'aps' => [
-                        'sound' => 'default',
-                    ],
-                ],
+            'headers' => [
+                'apns-priority' => '10',
             ],
         ];
+
+        // Add iOS category if actions are specified
+        if (!empty($config['actions'])) {
+            $apnsConfig['payload']['aps']['category'] = $config['category_id'] ?? 'default_category';
+        }
 
         // Build the final payload
-        $arrayToSend = [
-            'message' => array_merge(
-                [
-                    'token' => is_array($fcm_token) ? null : $fcm_token,
-                    'notification' => $notification,
-                    'data' => $data,
-                ],
-                $platformConfig
-            ),
+        $messagePayload = [
+            'message' => [
+                'token' => is_array($fcm_token) ? null : $fcm_token,
+                'notification' => $notification,
+                'android' => $androidConfig,
+                'apns' => $apnsConfig,
+                'data' => $data,
+            ],
         ];
 
-        $json = json_encode($arrayToSend);
+        // Add tokens array if multiple tokens provided
+        if (is_array($fcm_token)) {
+            unset($messagePayload['message']['token']);
+            $messagePayload['message']['tokens'] = $fcm_token;
+        }
 
-        // Send the request using Guzzle
+        // Send the request
         $client = new Client();
         $response = $client->post(
             $config['url'] ?? 'https://fcm.googleapis.com/v1/projects/YOUR_PROJECT_ID/messages:send',
@@ -105,7 +171,7 @@ class FirebaseNotification
                     'Authorization' => 'Bearer ' . $accessToken,
                     'Content-Type' => 'application/json',
                 ],
-                'body' => $json,
+                'json' => $messagePayload,
             ]
         );
 
@@ -117,11 +183,18 @@ class FirebaseNotification
                 'message' => 'Notification sent successfully.',
                 'response' => json_decode($response->getBody(), true),
             ];
-        } else {
+        }
+
+        return [
+            'status' => false,
+            'message' => 'Failed to send notification.',
+            'response' => json_decode($response->getBody(), true),
+        ];
+
+        } catch (\Exception $e) {
             return [
                 'status' => false,
-                'message' => 'Failed to send notification.',
-                'response' => json_decode($response->getBody(), true),
+                'message' => 'Error sending notification: ' . $e->getMessage(),
             ];
         }
     }
