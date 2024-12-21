@@ -1,12 +1,20 @@
 {
     "name": "chandra-hemant/htkc-utils",
-    "description": "Introducing a powerful and flexible dynamic search function for Laravel applications, designed to simplify complex queries with nested and recursive relationship conditions. This package provides an elegant solution to dynamically search across multiple models and their related data, offering developers the ability to handle various levels of relationships in a single, streamlined query.",
+    "description": "Introducing a powerful and flexible dynamic search, push notifications, file upload, alpha numeric generator functions for Laravel applications, designed to simplify complex queries with nested and recursive relationship conditions. This package provides an elegant solution to dynamically search across multiple models and their related data, offering developers the ability to handle various levels of relationships in a single, streamlined query.",
     "type": "library",
     "license": "MIT",
     "keywords": [
       "custom-search",
       "dynamic-search",
+      "upload-files",
+      "file-upload",
+      "alpha-numeric-generator",
+      "mail",
+      "fcm",
+      "push-notification",
       "htkc-utils",
+      "common-utils",
+      "custom-utils",
       "laravel",
       "laravel-utils",
       "php",
@@ -25,6 +33,8 @@
         }
     ],
     "require": {
-        "php": "^7.4 || ^8.0 || ^8.1 || ^8.2 || ^8.3"
+        "php": "^7.4 || ^8.0 || ^8.1 || ^8.2 || ^8.3",
+        "google/auth": "^1.45",
+        "guzzlehttp/guzzle": "^7.9"
     }
 }

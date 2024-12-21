@@ -7,6 +7,7 @@ Introducing a powerful and flexible dynamic search function for Laravel applicat
 
 ##### Namespace: ChandraHemant\DynamicSearch
 ##### Namespace: ChandraHemant\CommonUtils
+##### Namespace: ChandraHemant\FirebaseNotification
 ##### Author: Hemant Kumar Chandra
 
 ## Features
@@ -209,7 +210,7 @@ $sent = CommonUtils::sendMail('user@example.com', new WelcomeMail(), $options);
 Handles send notification using firebase.
 
 ```php
-public static function sendPushNotification(
+public static function sendPushNotificationWithServerKey(
     string $title,
     string $body,
     $fcm_token,
@@ -246,7 +247,7 @@ Example usage:
         'custom_key' => 'custom_value',
     ];
 
-    $response = CommonUtils::sendPushNotification($title, $body, $fcm_token, $config, $additionalData);
+    $response = FirebaseNotification::sendPushNotificationWithServerKey($title, $body, $fcm_token, $config, $additionalData);
 
     if ($response['status']) {
         echo $response['message'];
@@ -254,6 +255,94 @@ Example usage:
         echo "Error: " . $response['message'];
         print_r($response['response']);
     }
+```
+
+### sendPushNotification
+Handles sending notifications using Firebase Cloud Messaging (FCM).
+
+```php
+public static function sendPushNotification(
+    string $title,
+    string $body,
+    $fcm_token,
+    string $serviceAccountPath,
+    array $config = [],
+    array $additionalData = []
+): array
+```
+
+#### Parameters:
+- `$title`: Notification title.
+- `$body`: Notification body.
+- `$fcm_token`: Single FCM token or an array of FCM tokens.
+- `$serviceAccountPath`: Path to the Firebase service account JSON file.
+- `$config`: Configuration options provided by the user:
+  - `url`: The FCM endpoint URL (default: `https://fcm.googleapis.com/v1/projects/YOUR_PROJECT_ID/messages:send`).
+  - `android_channel_id`: The Android channel ID (default: `high_importance_channel`).
+- `$additionalData`: Optional additional data to include in the payload (all values must be strings).
+
+#### Example usage:
+```php
+use ChandraHemant/FirebaseNotification;
+
+// Define your service account key path
+$serviceAccountPath = __DIR__ . '/path/to/service-account-file.json';
+
+// Set the FCM token (single or array of tokens)
+$fcmToken = 'YOUR_FCM_DEVICE_TOKEN';
+
+// Define the notification details
+$title = 'New Alert';
+$body = 'You have a new message!';
+$additionalData = [
+    'user_id' => '123',
+    'notification_type' => 'alert',
+];
+
+// Configuration for the request
+$config = [
+    'url' => 'https://fcm.googleapis.com/v1/projects/your_project_id/messages:send',
+    'android_channel_id' => 'high_importance_channel',
+];
+
+// Send the push notification
+$response = FirebaseNotification::sendPushNotification(
+    $title,
+    $body,
+    $fcmToken,
+    $serviceAccountPath,
+    $config,
+    $additionalData
+);
+
+// Output the result
+if ($response['status']) {
+    echo 'Notification sent successfully: ' . json_encode($response['response'], JSON_PRETTY_PRINT);
+} else {
+    echo 'Failed to send notification: ' . $response['message'];
+    if (isset($response['response'])) {
+        echo 'Error details: ' . json_encode($response['response'], JSON_PRETTY_PRINT);
+    }
+}
+```
+
+#### Expected Output:
+On success:
+```plaintext
+Notification sent successfully: {
+    "name": "projects/your_project_id/messages/abc123"
+}
+```
+
+On failure:
+```plaintext
+Failed to send notification: Failed to send notification.
+Error details: {
+    "error": {
+        "code": 400,
+        "message": "Invalid value at 'message.data[3].value' (TYPE_STRING), 0"
+    }
+}
 ```
 
 ## Usage
