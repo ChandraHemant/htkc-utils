@@ -206,7 +206,7 @@ $options = [
 $sent = CommonUtils::sendMail('user@example.com', new WelcomeMail(), $options);
 ```
 
-### sendPushNotification
+### sendPushNotificationWithServerKey
 Handles send notification using firebase.
 
 ```php
@@ -283,7 +283,7 @@ public static function sendPushNotification(
 
 #### Example usage:
 ```php
-use ChandraHemant/FirebaseNotification;
+use ChandraHemant/HtkcUtils/FirebaseNotification;
 
 // Define your service account key path
 $serviceAccountPath = __DIR__ . '/path/to/service-account-file.json';
@@ -324,6 +324,45 @@ if ($response['status']) {
         echo 'Error details: ' . json_encode($response['response'], JSON_PRETTY_PRINT);
     }
 }
+
+//Other example with more config
+
+$config = [
+    'url' => 'https://fcm.googleapis.com/v1/projects/YOUR_PROJECT_ID/messages:send',
+    'android_channel_id' => 'high_importance_channel',
+    'priority' => 'PRIORITY_HIGH',
+    'with_sound' => true,
+    'notification_sound' => 'custom_sound',
+    'android_icon' => 'ic_notification',
+    'color' => '#FF0000',
+    'led_color' => '#00FF00',
+    'led_on_ms' => '500ms',
+    'led_off_ms' => '500ms',
+    'image_url' => 'https://example.com/image.jpg',
+    'category_id' => 'message_category',
+    'actions' => [
+        [
+            'id' => 'reply',
+            'title' => 'Reply',
+            'icon_path' => 'ic_reply'
+        ],
+        [
+            'id' => 'dismiss',
+            'title' => 'Dismiss',
+            'icon_path' => 'ic_dismiss'
+        ]
+    ]
+];
+
+// Send notification
+$result = FirebaseNotification::sendPushNotification(
+    'Title',
+    'Body',
+    'FCM_TOKEN',
+    'path/to/service-account.json',
+    $config,
+    ['custom_data' => 'value']
+);
 ```
 
 #### Expected Output:
