@@ -308,7 +308,7 @@ class CommonUtils
             return true;
         } catch (\Exception $e) {
             // Log the error for debugging
-            Log::error('Mail sending failed: ' . $e->getMessage());
+            \Log::error('Mail sending failed: ' . $e->getMessage());
             return false;
         }
     }
